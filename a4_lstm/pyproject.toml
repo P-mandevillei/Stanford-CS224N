@@ -1,0 +1,32 @@
+[project]
+name = "a4-lstm"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "docopt",
+    "lxml==5.0.0",
+    "nltk",
+    "numpy",
+    "sacrebleu",
+    "scipy",
+    "sentencepiece",
+    "tensorboard",
+    "torch<=2.4.1",
+    "torchvision<=0.19.1",
+    "tqdm",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu" }
+]
+torchvision = [
+  { index = "pytorch-cpu" }
+]

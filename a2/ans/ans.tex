@@ -1,0 +1,195 @@
+\documentclass[11pt]{article}
+\usepackage[left=0.7in,right=0.7in,top=1in,bottom=0.7in]{geometry}
+\usepackage{fancyhdr} % for header
+\usepackage{graphicx} % for figures
+\usepackage{amsmath}  % for extended math markup
+\usepackage{amssymb}  % "" (more math symbols)
+\usepackage[style=authoryear]{biblatex}
+\usepackage[bookmarks=false]{hyperref} % for URL embedding
+\usepackage[noend]{algpseudocode} % for pseudocode
+\usepackage[plain]{algorithm} % float environment for algorithms
+\usepackage{float}
+\usepackage{mhchem}
+\usepackage{xurl}
+\newcommand{\bvec}[1]{\textbf{#1}}
+
+\title{Assignment 2 Solutions}
+\author{Charlie Li}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Understanding word2vec}
+\subsection*{(a)}
+$y_w$ is 0 everywhere except for $y_o$, which equals 1.
+
+\subsection*{(b)}
+\begin{enumerate}
+  \item 
+  \begin{align*}
+  \frac{\partial}{\partial \bvec{v}_c} \bvec{J}_{\text{naive-softmax}}(\bvec{v}_c, o, \bvec{U})
+    &= \frac{\partial}{\partial \bvec{v}_c} \left(-\log P(O=o \mid C=c)\right) \\
+    &= - \frac{\partial}{\partial \bvec{v}_c} \log \frac{\exp(\bvec{u}_o^{\top}\bvec{v}_c)}{\sum_{w\in \text{Vocab}} \exp(\bvec{u}_w^{\top}\bvec{v}_c)} \\
+    &=  -\frac{\sum_{w\in \text{Vocab}} \exp(\bvec{u}_w^{\top}\bvec{v}_c)}{\exp(\bvec{u}_o^{\top}\bvec{v}_c)}\times \frac{\partial}{\partial \bvec{v}_c} \frac{\exp(\bvec{u}_o^{\top}\bvec{v}_c)}{\sum_{w\in \text{Vocab}} \exp(\bvec{u}_w^{\top}\bvec{v}_c)} \\
+  \frac{\partial}{\partial \bvec{v}_c} \frac{\exp(\bvec{u}_o^{\top}\bvec{v}_c)}{\sum_{w\in \text{Vocab}} \exp(\bvec{u}_w^{\top}\bvec{v}_c)}  
+    &= \frac{
+      \frac{\partial}{\partial \bvec{v}_c} \exp(\bvec{u}_o^{\top}\bvec{v}_c) \sum_{w\in \text{Vocab}} \exp(\bvec{u}_w^{\top}\bvec{v}_c)
+      - \exp(\bvec{u}_o^{\top}\bvec{v}_c) \frac{\partial}{\partial \bvec{v}_c} \sum_{w\in \text{Vocab}} \exp(\bvec{u}_w^{\top}\bvec{v}_c)
+    }{
+      \left(\sum_{w\in \text{Vocab}} \exp(\bvec{u}_w^{\top}\bvec{v}_c)\right)^2
+    } \\
+    &= \frac{
+      \bvec{u}_o^{\top}\exp(\bvec{u}_o^{\top}\bvec{v}_c) \sum_{w\in \text{Vocab}} \exp(\bvec{u}_w^{\top}\bvec{v}_c) - \exp(\bvec{u}_o^{\top}\bvec{v}_c) \sum_{w\in \text{Vocab}} \bvec{u}_w^{\top} \exp(\bvec{u}_w^{\top}\bvec{v}_c)
+    }{
+      \left(\sum_{w\in \text{Vocab}} \exp(\bvec{u}_w^{\top}\bvec{v}_c)\right)^2
+    }\\
+    &= \frac{\bvec{u}_o^{\top}\exp(\bvec{u}_o^{\top}\bvec{v}_c)}{\sum_{w\in \text{Vocab}} \exp(\bvec{u}_w^{\top}\bvec{v}_c)} - \frac{ \exp(\bvec{u}_o^{\top}\bvec{v}_c) \sum_{w\in \text{Vocab}} \bvec{u}_w^{\top} \exp(\bvec{u}_w^{\top}\bvec{v}_c)}{\left(\sum_{w\in \text{Vocab}} \exp(\bvec{u}_w^{\top}\bvec{v}_c)\right)^2}\\
+  \frac{\partial}{\partial \bvec{v}_c} \bvec{J}_{\text{naive-softmax}}(\bvec{v}_c, o, \bvec{U})
+    &= -\bvec{u}_o^{\top} + \frac{\sum_{w\in \text{Vocab}} \bvec{u}_w^{\top} \exp(\bvec{u}_w^{\top}\bvec{v}_c)}{\sum_{w\in \text{Vocab}} \exp(\bvec{u}_w^{\top}\bvec{v}_c)}\\
+    &= -\bvec{u}_o^{\top} + E_o[\bvec{u}_o^{\top}|C=c]
+  \end{align*}
+  With shape convention, \[ \frac{\partial}{\partial \bvec{v}_c} \bvec{J}_{\text{naive-softmax}}(\bvec{v}_c, o, \bvec{U}) = -\bvec{u}_o + E_o[\bvec{u}_o|C=c]   = -\bvec{U}y +\bvec{U}\hat{y} = \bvec{U}(-y+\hat{y}) \]
+
+  \item 
+  \[\bvec{U}(-y+\hat{y}) = 0 \]
+  \[ -y+\hat{y}\in \text{Null}(\bvec{U}) \]
+  
+  \item Adding $\bvec{u}_o$ to the word vector $v_c$ makes it more aligned to $\bvec{u}_o$, which increases the dot product between $\bvec{u}_o$ and $\bvec{v}_c$, thus increasing the probability $P(O=o|C=c)$. Subtracting the expectation of $\bvec{u}_o$ zeros out the current guess and pushes the vector away from wrong outside words.
+\end{enumerate}
+
+\subsection*{(c)} It would affect the classification when a word that has a stronger emotion also has a word vector with a larger magnitude. It would not affect the classification when the length of the word vector is not correlated with the strength of the meaning of the word.
+
+\subsection*{(d)}
+$$\frac{\partial J}{\partial U} = \left[ \frac{\partial J}{\partial \bvec{u}_1}, \frac{\partial J}{\partial \bvec{u}_2}, \dots, \frac{\partial J}{\partial \bvec{u}_{|\text{Vocab}|}} \right]$$
+
+\subsection*{(e)}
+\begin{align*}
+  \frac{\partial J}{\partial \bvec{u}_{i}} &= -\frac{\partial}{\partial \bvec{u}_{i}} log\frac{exp(\bvec{u}_o^{\top}\bvec{v}_c)}{\sum_{w\in \text{Vocab}}exp(\bvec{u}_w^{\top}\bvec{v}_c)}\\
+    &= -\frac{\sum_{w\in \text{Vocab}}exp(\bvec{u}_w^{\top}\bvec{v}_c)}{exp(\bvec{u}_o^{\top}\bvec{v}_c)}\\
+    & \left[ \frac{
+      \frac{\partial}{\partial \bvec{u}_{i}}exp(\bvec{u}_o^{\top}\bvec{v}_c)\sum_{w\in \text{Vocab}}exp(\bvec{u}_w^{\top}\bvec{v}_c) - exp(\bvec{u}_o^{\top}\bvec{v}_c)\frac{\partial}{\partial \bvec{u}_{i}}(\sum_{w\in \text{Vocab}}exp(\bvec{u}_w^{\top}\bvec{v}_c))
+    }{(\sum_{w\in \text{Vocab}}exp(\bvec{u}_w^{\top}\bvec{v}_c))^2} \right]\\
+    &=AB \\
+  \text{case 1: }i\ne o\\
+  B &= \frac{-exp(\bvec{u}_o^{\top}\bvec{v}_c)\bvec{v}_c exp(\bvec{u}_i^{\top}\bvec{v}_c)}{(\sum_{w\in \text{Vocab}}exp(\bvec{u}_w^{\top}\bvec{v}_c))^2}\\
+  AB &= \frac{\bvec{v}_c exp(\bvec{u}_i^{\top}\bvec{v}_c)}{\sum_{w\in \text{Vocab}}exp(\bvec{u}_w^{\top}\bvec{v}_c)}\\
+    &= \bvec{v}_c \hat{y}_i\\
+  \text{case 2: }i = o\\
+  B &= \frac{\bvec{v}_cexp(\bvec{u}_o^{\top}\bvec{v}_c)}{\sum_{w\in \text{Vocab}}exp(\bvec{u}_w^{\top}\bvec{v}_c)} + B_{\text{case 1}}\\
+  AB &= -\bvec{v}_c + \bvec{v}_c \hat{y}_i\\
+  \text{unified equation}\\
+  \frac{\partial J}{\partial \bvec{u}_{i}} &= \bvec{v}_c(\hat{y}_i - y_i)
+\end{align*}
+
+\subsection*{(f)}
+\begin{equation*}
+  f'(x) = \begin{cases}
+    1 & x>0\\
+    \alpha & x<0
+  \end{cases}
+\end{equation*}
+
+\subsection*{(g)}
+\begin{align*}
+  \sigma'(x) &= \frac{(e^x)'(e^x+1)-e^x(e^x+1)'}{(e^x+1)^2} \\
+  &= \frac{e^x(e^x+1) - e^x e^x}{(e^x+1)^2}\\
+  &= \frac{e^x}{e^{2x}+1+2e^x}\\
+  &= \frac{1}{e^x+e^{-x}+2}\\
+  1+e^{-x} &= \frac{1}{\sigma(x)}\\
+  e^{-x} &= \frac{1-\sigma(x)}{\sigma(x)}\\
+  e^{x} &= \frac{\sigma(x)}{1-\sigma(x)}\\
+  \sigma'(x) &= \frac{1}{\frac{\sigma(x)}{1-\sigma(x)}+\frac{1-\sigma(x)}{\sigma(x)}+2}\\
+  &= \frac{\sigma(x)(1-\sigma(x))}{\sigma^2(x)+(1-\sigma(x))^2+2\sigma(x)(1-\sigma(x))}\\
+  &= \sigma(x)(1-\sigma(x))
+\end{align*}
+
+\section{Neural Networks Optimization}
+
+\subsection*{(a)}
+\begin{enumerate}
+  \item The new gradient is multiplied by a coefficient $1-\beta_1$, which makes the change smaller. It accumulates the history of the gradients, which prevents the model from being trapped in shallow local minima.
+  \item Parameters with smaller $v$ will get larger updates, which corresponds to smaller gradient of $J$ with respect to that parameter. This helps with learning by helping parameters get out of a plateau or reach a minimum faster.
+\end{enumerate}
+
+\subsection*{(b)}
+\begin{enumerate}
+  \item \begin{align*}
+    h_{drop, i} &= \lambda d h_i\\
+    E[h_{drop, i}] &= E[\lambda d h_i] \\
+      &= \lambda E[d] h_i \\
+      &= h_i \\
+    \lambda &= \frac{1}{E[d]} \\
+      &= \frac{1}{p_{drop}}
+  \end{align*}
+
+\section{Neural Transition-Based Dependency Parsing}
+\subsection*{(a)}
+\begin{table}[htbp]
+  \centering
+  \small
+  \renewcommand{\arraystretch}{1.3}
+  \resizebox{\textwidth}{!}{
+    \begin{tabular}{|l|l|l|l|}
+      \hline
+      \textbf{Stack} & \textbf{Buffer} & \textbf{New dependency} & \textbf{Transition} \\
+      \hline
+      [ROOT, presented, my] & [findings, at, the, NLP, conference] & & \texttt{SHIFT}\\
+      \hline
+      [ROOT, presented, my, findings] & [at, the, NLP, conference] & & \texttt{SHIFT}\\
+      \hline
+      [ROOT, presented, findings] & [at, the, NLP, conference] & findings $\rightarrow$ my & \texttt{LEFT-ARC}\\
+      \hline
+      [ROOT, presented] & [at, the, NLP, conference] & presented $\rightarrow$ findings & \texttt{RIGHT-ARC}\\
+      \hline
+      [ROOT, presented, at] & [the, NLP, conference] & & \texttt{SHIFT}\\
+      \hline
+      [ROOT, presented, at, the] & [NLP, conference] & & \texttt{SHIFT}\\
+      \hline
+      [ROOT, presented, at, the, NLP] & [conference] & & \texttt{SHIFT}\\
+      \hline
+      [ROOT, presented, at, the, NLP, conference] & [] & & \texttt{SHIFT}\\
+      \hline
+      [ROOT, presented, at, the, conference] & [] & conference $\rightarrow$ NLP & \texttt{LEFT-ARC}\\
+      \hline
+      [ROOT, presented, at, conference] & [] & conference $\rightarrow$ the & \texttt{LEFT-ARC}\\
+      \hline
+      [ROOT, presented, conference] & [] & conference $\rightarrow$ at & \texttt{LEFT-ARC}\\
+      \hline
+      [ROOT, presented] & [] & presented $\rightarrow$ conference & \texttt{RIGHT-ARC}\\
+      \hline
+      [ROOT] & [] & ROOT $\rightarrow$ presented & \texttt{RIGHT-ARC}\\
+      \hline
+    \end{tabular}
+  }
+\end{table}
+
+\subsection*{(b)}
+$2n$ steps. It takes $n$ shifts to empty the buffer, and $n$ right or left arcs to empty the stack to one element.
+
+\subsection*{(e)}
+\subsubsection*{i}
+  \begin{align*}
+    h_i &= ReLU(\bvec{x}\bvec{W}_i+b_{1,i}) \text{  where $\bvec{W}_i$ is column $i$ in matrix $\bvec{W}$}\\
+    \frac{\partial h_i}{\partial x_j} &= \frac{\partial ReLU(\bvec{x}\bvec{W}_i+b_{1,i})}{\partial \bvec{x}\bvec{W}_i+b_{1,i}} \frac{\partial \bvec{x}\bvec{W}_i+b_{1,i}}{\partial x_j}\\
+      &= [(\bvec{x}\bvec{W}_i+b_{1,i}) > 0]W_{j, i}
+  \end{align*}
+
+\subsubsection*{ii}
+  \begin{align*}
+    \frac{\partial J}{\partial \hat{y}_i} &= -\frac{y_i}{\hat{y}_i}\\
+    \hat{y}_i &= \frac{e^{l_i}}{\sum_{j=1}^{3}e^{l_j}}\\
+    \frac{\partial \hat{y}_i}{\partial l_i} &= \frac{e^{l_i}(\sum_{j=1}^{3}e^{l_j}) - e^{l_i}e^{l_i}}{(\sum_{j=1}^{3}e^{l_j})^2}\\
+    \frac{\partial J}{\partial \hat{l}_i} &=  -\frac{y_i}{\hat{y}_i}\frac{e^{l_i}(\sum_{j=1}^{3}e^{l_j}) - e^{2l_i}}{(\sum_{j=1}^{3}e^{l_j})^2}\\
+  \end{align*}
+
+\subsubsection*{iii}
+\begin{itemize}
+  \item UAS on dev set: 72.10
+  \item UAS on test set: 89.31
+\end{itemize}
+
+\end{enumerate}
+
+\end{document}
