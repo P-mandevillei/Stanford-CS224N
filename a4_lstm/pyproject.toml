@@ -12,6 +12,7 @@ dependencies = [
     "sacrebleu",
     "scipy",
     "sentencepiece",
+    "six>=1.17.0",
     "tensorboard",
     "torch<=2.4.1",
     "torchvision<=0.19.1",

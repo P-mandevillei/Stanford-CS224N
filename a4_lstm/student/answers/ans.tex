@@ -1,0 +1,28 @@
+\documentclass[11pt]{article}
+\usepackage[left=0.7in,right=0.7in,top=1in,bottom=0.7in]{geometry}
+\usepackage{fancyhdr} % for header
+\usepackage{graphicx} % for figures
+\usepackage{amsmath}  % for extended math markup
+\usepackage{amssymb}  % "" (more math symbols)
+\usepackage[style=authoryear]{biblatex}
+\usepackage[bookmarks=false]{hyperref} % for URL embedding
+\usepackage[noend]{algpseudocode} % for pseudocode
+\usepackage[plain]{algorithm} % float environment for algorithms
+\usepackage{float}
+\usepackage{mhchem}
+\usepackage{xurl}
+\newcommand{\bvec}[1]{\textbf{#1}}
+
+\title{Assignment 4 (NMT LSTM) Solutions}
+\author{Charlie Li}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Neural Machine Translation with RNNs}
+\subsection*{(g)}
+  The masks set the attention score to $-\inf$ at the positions of the pad tokens. When computing the softmax, these attention scores become 0, which means that the source encodings of the padding does not contribute to the decoder predictions. This is necessary because the decoder needs only to attend to actual information in the source sentence. The pad tokens will only add noise to the prediction and should not be added.
+
+\end{document}
